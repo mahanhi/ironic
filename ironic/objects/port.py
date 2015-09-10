@@ -15,12 +15,19 @@
 
 from oslo_utils import strutils
 from oslo_utils import uuidutils
+from oslo_config import cfg
 
 from ironic.common import exception
 from ironic.common import utils
 from ironic.db import api as dbapi
 from ironic.objects import base
 from ironic.objects import utils as obj_utils
+
+from ironic.static import network_services
+
+from ironic.openstack.common import log as logging
+
+LOG = logging.getLogger(__name__)
 
 
 class Port(base.IronicObject):
@@ -159,6 +166,19 @@ class Port(base.IronicObject):
 
         """
         values = self.obj_get_changes()
+        #Reade config, if static_provider is true get static IP from neutron
+        #Maha
+        network_provider = network_services.NetworkStaticProvider()
+        port_dict = network_provider.get_port("2da30846-69d2-4d7f-9202-a01c393716c7",context.auth_token)
+        fixed_ips = port_dict.get('fixed_ips')
+
+        if fixed_ips:
+            ip_address = fixed_ips[0].get('ip_address', None)
+
+        if ip_address:
+            LOG.debug("IP Address =====>>>> ", ip_address)
+
+
         db_port = self.dbapi.create_port(values)
         self._from_db_object(self, db_port)
 
