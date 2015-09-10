@@ -15,12 +15,19 @@
 
 from oslo_utils import strutils
 from oslo_utils import uuidutils
+from oslo_config import cfg
 
 from ironic.common import exception
 from ironic.common import utils
 from ironic.db import api as dbapi
 from ironic.objects import base
-from ironic.objects import fields as object_fields
+from ironic.objects import utils as obj_utils
+
+from ironic.static import network_services
+
+from ironic.openstack.common import log as logging
+
+LOG = logging.getLogger(__name__)
 
 
 class Port(base.IronicObject):
@@ -35,11 +42,11 @@ class Port(base.IronicObject):
     dbapi = dbapi.get_instance()
 
     fields = {
-        'id': object_fields.IntegerField(),
-        'uuid': object_fields.UUIDField(nullable=True),
-        'node_id': object_fields.IntegerField(nullable=True),
-        'address': object_fields.MACAddressField(nullable=True),
-        'extra': object_fields.FlexibleDictField(nullable=True),
+        'id': int,
+        'uuid': obj_utils.str_or_none,
+        'node_id': obj_utils.int_or_none,
+        'address': obj_utils.str_or_none,
+        'extra': obj_utils.dict_or_none,
     }
 
     @staticmethod
@@ -62,8 +69,6 @@ class Port(base.IronicObject):
 
         :param port_id: the id *or* uuid of a port.
         :returns: a :class:`Port` object.
-        :raises: InvalidIdentity
-
         """
         if strutils.is_int_like(port_id):
             return cls.get_by_id(context, port_id)
@@ -80,8 +85,6 @@ class Port(base.IronicObject):
 
         :param port_id: the id of a port.
         :returns: a :class:`Port` object.
-        :raises: PortNotFound
-
         """
         db_port = cls.dbapi.get_port_by_id(port_id)
         port = Port._from_db_object(cls(context), db_port)
@@ -94,8 +97,6 @@ class Port(base.IronicObject):
         :param uuid: the uuid of a port.
         :param context: Security context
         :returns: a :class:`Port` object.
-        :raises: PortNotFound
-
         """
         db_port = cls.dbapi.get_port_by_uuid(uuid)
         port = Port._from_db_object(cls(context), db_port)
@@ -108,8 +109,6 @@ class Port(base.IronicObject):
         :param address: the address of a port.
         :param context: Security context
         :returns: a :class:`Port` object.
-        :raises: PortNotFound
-
         """
         db_port = cls.dbapi.get_port_by_address(address)
         port = Port._from_db_object(cls(context), db_port)
@@ -126,7 +125,6 @@ class Port(base.IronicObject):
         :param sort_key: column to sort results by.
         :param sort_dir: direction to sort. "asc" or "desc".
         :returns: a list of :class:`Port` object.
-        :raises: InvalidParameterValue
 
         """
         db_ports = cls.dbapi.get_port_list(limit=limit,
@@ -165,11 +163,22 @@ class Port(base.IronicObject):
                         argument, even though we don't use it.
                         A context should be set when instantiating the
                         object, e.g.: Port(context)
-        :raises: MACAlreadyExists if 'address' column is not unique
-        :raises: PortAlreadyExists if 'uuid' column is not unique
 
         """
         values = self.obj_get_changes()
+        #Reade config, if static_provider is true get static IP from neutron
+        #Maha
+        network_provider = network_services.NetworkStaticProvider()
+        port_dict = network_provider.get_port("2da30846-69d2-4d7f-9202-a01c393716c7",context.auth_token)
+        fixed_ips = port_dict.get('fixed_ips')
+
+        if fixed_ips:
+            ip_address = fixed_ips[0].get('ip_address', None)
+
+        if ip_address:
+            LOG.debug("IP Address =====>>>> ", ip_address)
+
+
         db_port = self.dbapi.create_port(values)
         self._from_db_object(self, db_port)
 
@@ -183,8 +192,6 @@ class Port(base.IronicObject):
                         argument, even though we don't use it.
                         A context should be set when instantiating the
                         object, e.g.: Port(context)
-        :raises: PortNotFound
-
         """
         self.dbapi.destroy_port(self.uuid)
         self.obj_reset_changes()
@@ -202,13 +209,11 @@ class Port(base.IronicObject):
                         argument, even though we don't use it.
                         A context should be set when instantiating the
                         object, e.g.: Port(context)
-        :raises: PortNotFound
-        :raises: MACAlreadyExists if 'address' column is not unique
-
         """
         updates = self.obj_get_changes()
-        updated_port = self.dbapi.update_port(self.uuid, updates)
-        self._from_db_object(self, updated_port)
+        self.dbapi.update_port(self.uuid, updates)
+
+        self.obj_reset_changes()
 
     @base.remotable
     def refresh(self, context=None):
@@ -224,8 +229,9 @@ class Port(base.IronicObject):
                         argument, even though we don't use it.
                         A context should be set when instantiating the
                         object, e.g.: Port(context)
-        :raises: PortNotFound
-
         """
         current = self.__class__.get_by_uuid(self._context, uuid=self.uuid)
-        self.obj_refresh(current)
+        for field in self.fields:
+            if (hasattr(self, base.get_attrname(field)) and
+                    self[field] != current[field]):
+                self[field] = current[field]
