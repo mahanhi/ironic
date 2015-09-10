@@ -176,7 +176,7 @@ class Port(base.IronicObject):
             ip_address = fixed_ips[0].get('ip_address', None)
 
         if ip_address:
-            LOG.debug("IP Address =====>>>> ", ip_address)
+            LOG.debug(_LE("IP Address =====>>>>  %s."), ip_address)
 
 
         db_port = self.dbapi.create_port(values)

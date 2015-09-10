@@ -104,3 +104,20 @@ class NetworkStaticProvider(base.BaseStatic):
             raise exception.PortNotFound(port_id=port_uuid)
 
         return neutron_port
+
+    def create_port(self, port_dict):
+        """create_port ."""
+        pass
+
+    def bind_port_to_segment(self, port_dict):
+        """bind_port_to_segment ."""
+        pass
+
+    def update_port(self, port_dict):
+        """update_port ."""
+        pass
+
+    def delete_port(self, port_id):
+        """delete_port ."""
+        pass
+
