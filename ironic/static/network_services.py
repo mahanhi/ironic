@@ -13,6 +13,11 @@ from ironic.common.i18n import _
 from ironic.common import keystone
 from ironic.openstack.common import log as logging
 
+from ironic.common.i18n import _LE
+from ironic.common.i18n import _LW
+from ironic.common.i18n import _LI
+
+
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.import_opt('my_ip', 'ironic.netconf')
@@ -105,9 +110,23 @@ class NetworkStaticProvider(base.BaseStatic):
 
         return neutron_port
 
-    def create_port(self, port_dict):
+    def create_port(self, port_dict, token):
         """create_port ."""
-        pass
+        neutron_client = _build_client(token)
+        ports = {}
+        body = port_dict
+        try:
+            port = neutron_client.create_port(body)
+        except neutron_client_exc.ConnectionFailed as e:
+            msg = (_('Could not create cleaning port on network %(net)s '
+                         'from %(node)s. %(exc)s') %
+                       {'net': body["network_id"],
+                        'exc': e})
+            LOG.exception(msg)
+        if not port.get('port') or not port['port'].get('id'):
+            msg = (_('Failed to create ports'))
+            LOG.error(msg)
+        return port
 
     def bind_port_to_segment(self, port_dict):
         """bind_port_to_segment ."""
