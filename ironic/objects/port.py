@@ -182,7 +182,7 @@ class Port(base.IronicObject):
         port_dict['port']['device_id'] = str(values['node_id'])
         port_new = network_provider.create_port(port_dict,context.auth_token)
         #port_dict = network_provider.get_port(port_new['port'].get('id'),context.auth_token)
-        fixed_ips = port_new.get('fixed_ips')
+        fixed_ips = port_new['port'].get('fixed_ips')
         if fixed_ips:
             ip_address = fixed_ips[0].get('ip_address', None)
             values['extra']['ip'] = ip_address
