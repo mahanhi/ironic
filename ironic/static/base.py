@@ -38,3 +38,17 @@ class BaseStatic(object):
         """get_port ."""
         pass
 
+    @abc.abstractmethod
+    def get_subnet(self, subnet_uuid, token=None):
+        """get_subnet ."""
+        pass
+
+    @abc.abstractmethod
+    def get_network(self, net_uuid, token=None):
+        """get_network ."""
+        pass
+
+    @abc.abstractmethod
+    def find_network_by_tenant_name(self, tenant_name, token=None):
+        """find_network_by_tenant_name."""
+        pass
