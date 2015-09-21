@@ -36,6 +36,8 @@ from ironic.common.i18n import _
 from ironic.common import states as ir_states
 from ironic import objects
 from ironic.openstack.common import log
+from ironic.common.configdrive import configdrive as CreateConfigDrive
+
 
 
 CONF = cfg.CONF
@@ -402,6 +404,11 @@ class NodeStatesController(rest.RestController):
             raise exception.InvalidStateRequested(
                     action=target, node=rpc_node.uuid,
                     state=rpc_node.provision_state)
+
+        if not configdrive:
+            cd_create_obj = CreateConfigDrive.ConfigDrive()
+            cd_create_obj.create_meta_data(rpc_node.uuid)
+
 
         if configdrive and target != ir_states.ACTIVE:
             msg = (_('Adding a config drive is only supported when setting '

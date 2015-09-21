@@ -26,7 +26,7 @@ static_provider_opts = [
     cfg.StrOpt('static_provider',
                default=None,
                help='Static provider to use. "neutron" uses Neutron, and '
-               '"none" uses a no-op provider.'),
+                    '"none" uses a no-op provider.'),
 ]
 CONF.register_opts(static_provider_opts)
 
@@ -47,9 +47,7 @@ neutron_opts = [
                     'Running neutron in noauth mode (related to but not '
                     'affected by this setting) is insecure and should only be '
                     'used for testing.')
-    ]
-
-
+]
 
 CONF.register_opts(neutron_opts, group='neutron')
 LOG = logging.getLogger(__name__)
@@ -72,7 +70,7 @@ def _build_client(token=None):
         params['endpoint_url'] = CONF.neutron.url
         params['auth_strategy'] = 'noauth'
     elif (CONF.neutron.auth_strategy == 'keystone' and
-          token is None):
+                  token is None):
         params['endpoint_url'] = (CONF.neutron.url or
                                   keystone.get_service_url('neutron'))
         params['username'] = CONF.keystone_authtoken.admin_user
@@ -88,8 +86,8 @@ def _build_client(token=None):
 
     return clientv20.Client(**params)
 
-class NetworkStaticProvider(base.BaseStatic):
 
+class NetworkStaticProvider(base.BaseStatic):
     def get_port(self, port_uuid, token):
         """get_port ."""
         """Get a port dict.
@@ -112,13 +110,13 @@ class NetworkStaticProvider(base.BaseStatic):
 
     def get_subnet(self, subnet_uuid, token):
         """get_subnet ."""
-	"""Get a subnet dict.
-        :param subnet_uuid: Neutron subnet id.
-        :param client: Neutron client instance.
-        :returns: Neutron subnet dict.
-        :raises: SubnetNotFound
-        """
-	try:
+        """Get a subnet dict.
+            :param subnet_uuid: Neutron subnet id.
+            :param client: Neutron client instance.
+            :returns: Neutron subnet dict.
+            :raises: SubnetNotFound
+            """
+        try:
             client = _build_client(token)
             neutron_subnet = client.show_subnet(subnet_uuid).get('subnet')
         except neutron_client_exc.NeutronClientException:
@@ -130,13 +128,13 @@ class NetworkStaticProvider(base.BaseStatic):
 
     def get_network(self, net_uuid, token):
         """get_network ."""
-	"""Get a network dict.
-        :param net_uuid: Neutron network id.
-        :param client: Neutron client instance.
-        :returns: Neutron network dict.
-        :raises: NetworkNotFound
-        """
-	try:
+        """Get a network dict.
+            :param net_uuid: Neutron network id.
+            :param client: Neutron client instance.
+            :returns: Neutron network dict.
+            :raises: NetworkNotFound
+            """
+        try:
             client = _build_client(token)
             neutron_network = client.show_network(net_uuid).get('network')
         except neutron_client_exc.NeutronClientException:
@@ -148,13 +146,13 @@ class NetworkStaticProvider(base.BaseStatic):
 
     def find_network_by_tenant_name(self, tenant_name, token=None):
         """find_network_by_tenant_name."""
-	"""find a network by tenant name.
-        :param tenant_name: Neutron network tenant name.
-        :param client: Neutron client instance.
-        :returns: Neutron network.
-        :raises: NetworkNotFound
-        """	
-	try:
+        """find a network by tenant name.
+            :param tenant_name: Neutron network tenant name.
+            :param client: Neutron client instance.
+            :returns: Neutron network.
+            :raises: NetworkNotFound
+            """
+        try:
             client = _build_client(token)
             neutron_networks = client.list_networks(tenant_name=tenant_name)
         except neutron_client_exc.NeutronClientException:
@@ -173,9 +171,9 @@ class NetworkStaticProvider(base.BaseStatic):
             port = neutron_client.create_port(body)
         except neutron_client_exc.ConnectionFailed as e:
             msg = (_('Could not create cleaning port on network %(net)s '
-                         'from %(node)s. %(exc)s') %
-                       {'net': body["network_id"],
-                        'exc': e})
+                     'from %(node)s. %(exc)s') %
+                   {'net': body["network_id"],
+                    'exc': e})
             LOG.exception(msg)
         if not port.get('port') or not port['port'].get('id'):
             msg = (_('Failed to create ports'))
@@ -197,13 +195,13 @@ class NetworkStaticProvider(base.BaseStatic):
             neutron_client.delete_port(port_uuid)
         except neutron_client_exc.ConnectionFailed as e:
             msg = (_('Could not remove  port %(id)s '
-                         '%(exc)s') %
-                       {'id': port_uuid,
-                        'exc': e})
+                     '%(exc)s') %
+                   {'id': port_uuid,
+                    'exc': e})
             LOG.exception(msg)
             raise exception.PortDeleteFailure(msg)
-	    # Catch 404 on port delete 
-	except neutron_client_exc.NotFound as e:
-	    msg = (_('==>Port not found in neutron.'))	
-       	    LOG.exception(msg)	
+            # Catch 404 on port delete
+        except neutron_client_exc.NotFound as e:
+            msg = (_('==>Port not found in neutron.'))
+            LOG.exception(msg)
 

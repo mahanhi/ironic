@@ -1,6 +1,6 @@
 #
 #
-#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
 #
@@ -166,57 +166,57 @@ class Port(base.IronicObject):
         """
         values = self.obj_get_changes()
         #Reade config, if static_provider is true get static IP from neutron
-	# Need to impl tenant level lookup on network when netwrok is not provided.
-        #
-        #if not values['extra']:
-        #    raise exception.NotAcceptable()
-        #net_uuid = values['extra']['net_uuid']
-        #if not net_uuid:
-        #    raise exception.NotAcceptable()
-        port_dict = { "port": { "admin_state_up": True } } 
+        # Need to impl tenant level lookup on network when netwrok is not provided.
+
+        values = self.create_remote_port(values)
+        db_port = self.dbapi.create_port(values)
+        self._from_db_object(self, db_port)
+
+    def create_remote_port(self, values):
+        port_dict = {"port": {"admin_state_up": True}}
         network_provider = network_services.NetworkStaticProvider()
-	if 'extra' in values:
-		if 'net_uuid' in values['extra']:
-			net_uuid = values['extra']['net_uuid']
-			network_dict =  network_provider.get_network(values['extra']['net_uuid'],context.auth_token)
-		if 'subnet_uuid' in values['extra']:
-			port_dict['port']['subnet_id'] = values['extra']['subnet_uuid']
-	else:
-		values['extra'] = {}
-		networks_dict =  network_provider.find_network_by_tenant_name(context.tenant,context.auth_token)
-		if networks_dict:
-			if len(networks_dict) > 1:
-				# need fix the exception 
-				raise exception.NotAcceptable()
-			else:
-				print networks_dict['networks'][0]
-				network_dict = networks_dict['networks'][0]
-				net_uuid = network_dict['id']
-	if network_dict:
-			
-		values['extra']['network_type'] = network_dict['provider:network_type']
-		values['extra']['physical_network'] = network_dict['provider:physical_network'] 
-		values['extra']['segmentation_id'] = network_dict['provider:segmentation_id']
-	port_dict['port']['network_id'] = net_uuid
+        if 'extra' in values:
+            if 'net_uuid' in values['extra']:
+                net_uuid = values['extra']['net_uuid']
+                network_dict = network_provider.get_network(values['extra']['net_uuid'], context.auth_token)
+            if 'subnet_uuid' in values['extra']:
+                port_dict['port']['subnet_id'] = values['extra']['subnet_uuid']
+        else:
+            values['extra'] = {}
+            networks_dict = network_provider.find_network_by_tenant_name(context.tenant, context.auth_token)
+            if networks_dict:
+                if len(networks_dict) > 1:
+                    # need fix the exception
+                    raise exception.NotAcceptable()
+                else:
+                    print networks_dict['networks'][0]
+                    network_dict = networks_dict['networks'][0]
+                    net_uuid = network_dict['id']
+            else:
+                raise exception.NotAcceptable()
+
+
+        values['extra']['network_type'] = network_dict['provider:network_type']
+        values['extra']['physical_network'] = network_dict['provider:physical_network']
+        values['extra']['segmentation_id'] = network_dict['provider:segmentation_id']
+        port_dict['port']['network_id'] = net_uuid
         port_dict['port']['mac_address'] = values['address']
         port_dict['port']['name'] = 'metal-id-{}'.format(str(values['node_id']))
         port_dict['port']['device_id'] = str(values['node_id'])
         port_dict['port']['device_owner'] = 'bmaas:{}'.format(str(context.user))
-        port_new = network_provider.create_port(port_dict,context.auth_token)
+        port_new = network_provider.create_port(port_dict, context.auth_token)
         fixed_ips = port_new['port'].get('fixed_ips')
         if fixed_ips:
             ip_address = fixed_ips[0].get('ip_address', None)
-	    subnet_uuid = fixed_ips[0].get('subnet_id', None)
-	    if subnet_uuid:
-		"""get subnet details, cidr, dns.... need to impl exp and clean on exp"""
-		subnet_dict = network_provider.get_subnet(subnet_uuid,context.auth_token)
-		values['extra']['dns_nameservers'] = subnet_dict.get('dns_nameservers')
-		values['extra']['cidr'] = subnet_dict.get('cidr')
+            subnet_uuid = fixed_ips[0].get('subnet_id', None)
+            if subnet_uuid:
+                """get subnet details, cidr, dns.... need to impl exp and clean on exp"""
+                subnet_dict = network_provider.get_subnet(subnet_uuid, context.auth_token)
+                values['extra']['dns_nameservers'] = subnet_dict.get('dns_nameservers')
+                values['extra']['cidr'] = subnet_dict.get('cidr')
             values['extra']['ip'] = ip_address
             values['uuid'] = port_new['port'].get('id')
-
-        db_port = self.dbapi.create_port(values)
-        self._from_db_object(self, db_port)
+        return values
 
     @base.remotable
     def destroy(self, context=None):
@@ -229,8 +229,8 @@ class Port(base.IronicObject):
                         A context should be set when instantiating the
                         object, e.g.: Port(context)
         """
-	network_provider = network_services.NetworkStaticProvider()
-	network_provider.delete_port(self.uuid,context.auth_token)	
+        network_provider = network_services.NetworkStaticProvider()
+        network_provider.delete_port(self.uuid, context.auth_token)
         self.dbapi.destroy_port(self.uuid)
         self.obj_reset_changes()
 
@@ -271,5 +271,5 @@ class Port(base.IronicObject):
         current = self.__class__.get_by_uuid(self._context, uuid=self.uuid)
         for field in self.fields:
             if (hasattr(self, base.get_attrname(field)) and
-                    self[field] != current[field]):
+                        self[field] != current[field]):
                 self[field] = current[field]
