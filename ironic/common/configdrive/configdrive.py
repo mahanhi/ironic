@@ -30,7 +30,7 @@ class ConfigDrive(object):
 
         return configdrive
 
-    def create_meta_data(self,context, node_uuid):
+    def create_meta_data(self, node_uuid):
         #create /openstack/latest/meta_data.json
         #create /openstack/content/0000
         #network_config (IP Address, gateway, cidr, mac, dns, domain)
