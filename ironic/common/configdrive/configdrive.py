@@ -45,9 +45,9 @@ class ConfigDrive(object):
             content_fd = os.open(config_drive + "/openstack/content/0000",os.O_RDWR|os.O_CREAT)
             os.write(meta_fd, str(node_ident._id))
             os.write(content_fd, str(ports[0]))
-            for dir in os.listdir(config_drive + "openstack/content"):
+            for dir in os.listdir(config_drive + "/openstack/content"):
                 LOG.debug('List of childern %' %(dir))
-            for dir in os.listdir(config_drive + "openstack/latest"):
+            for dir in os.listdir(config_drive + "/openstack/latest"):
                 LOG.debug('List of childern %' %(dir))
 
     def create_dir(self, path):
