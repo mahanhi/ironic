@@ -36,21 +36,25 @@ class ConfigDrive(object):
         #network_config (IP Address, gateway, cidr, mac, dns, domain)
         #uuid, hostname, name, public_keys
         node_ident = objects.Node.get_by_uuid(context,node_uuid)
-        ports = objects.Port.get_all(context, node_ident._id)
+        ports = objects.Port.list_by_node_id(context, node_ident._id)
         LOG.debug('Got all the ports for %s, [%s]' %(node_uuid, ports))
         with utils.tempdir() as config_drive:
             LOG.debug('Got all the ports for %s, [%s] , %s' %(node_uuid, ports, config_drive))
             self.create_dir(config_drive)
-            os.write(config_drive + "openstack/latest/meta_data.json", node_ident._id)
-            os.write(config_drive + "openstack/content/0000", ports[0])
+            meta_fd = os.open(config_drive + "/openstack/latest/meta_data.json",os.O_RDWR|os.CREAT)
+            content_fd = os.open(config_drive + "/openstack/content/0000",os.O_RDWR|os.CREAT)
+            os.write(meta_fd, str(node_ident._id))
+            os.write(content_fd, str(ports[0]))
             for dir in os.listdir(config_drive + "openstack/content"):
                 LOG.debug('List of childern %' %(dir))
             for dir in os.listdir(config_drive + "openstack/latest"):
                 LOG.debug('List of childern %' %(dir))
 
     def create_dir(self, path):
-        os.mkdir(path + "openstack/latest")
-        os.mkdir(path + "/openstack/content/")
+        latest = path + "/openstack/latest"
+        content = path + "/openstack/content/"
+        os.makedirs(latest)
+        os.makedirs(content)
 
 
 
