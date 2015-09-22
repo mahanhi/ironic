@@ -41,8 +41,8 @@ class ConfigDrive(object):
         with utils.tempdir() as config_drive:
             LOG.debug('Got all the ports for %s, [%s] , %s' %(node_uuid, ports, config_drive))
             self.create_dir(config_drive)
-            meta_fd = os.open(config_drive + "/openstack/latest/meta_data.json",os.O_RDWR|os.CREAT)
-            content_fd = os.open(config_drive + "/openstack/content/0000",os.O_RDWR|os.CREAT)
+            meta_fd = os.open(config_drive + "/openstack/latest/meta_data.json",os.O_RDWR|os.O_CREAT)
+            content_fd = os.open(config_drive + "/openstack/content/0000",os.O_RDWR|os.O_CREAT)
             os.write(meta_fd, str(node_ident._id))
             os.write(content_fd, str(ports[0]))
             for dir in os.listdir(config_drive + "openstack/content"):
@@ -55,6 +55,7 @@ class ConfigDrive(object):
         content = path + "/openstack/content/"
         os.makedirs(latest)
         os.makedirs(content)
+
 
 
 
