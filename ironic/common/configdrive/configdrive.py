@@ -16,7 +16,7 @@ import tempfile
 
 from ironic.common import exception
 from ironic.common.i18n import _
-
+from ironic.common import utils
 from ironic.openstack.common import log
 
 LOG = log.getLogger(__name__)
@@ -30,25 +30,29 @@ class ConfigDrive(object):
 
         return configdrive
 
-    def create_meta_data(self, node_uuid):
+    def create_meta_data(self, node_uuid, context):
         #create /openstack/latest/meta_data.json
         #create /openstack/content/0000
         #network_config (IP Address, gateway, cidr, mac, dns, domain)
         #uuid, hostname, name, public_keys
-        node = objects.Node.get_by_uuid(node_uuid)
-        ports = objects.Port.get_all(node_uuid)
+        node_ident = objects.Node.get_by_uuid(context,node_uuid)
+        ports = objects.Port.get_all(context, node_ident._id)
         LOG.debug('Got all the ports for %s, [%s]' %(node_uuid, ports))
-        config_drive = self.tempdir()
-        LOG.debug('Got all the ports for %s, [%s] , %s' %(node_uuid, ports, config_drive))
+        with utils.tempdir() as config_drive:
+            LOG.debug('Got all the ports for %s, [%s] , %s' %(node_uuid, ports, config_drive))
+            self.create_dir(config_drive)
+            os.write(config_drive + "openstack/latest/meta_data.json", node_ident._id)
+            os.write(config_drive + "openstack/content/0000", ports[0])
+            for dir in os.listdir(config_drive + "openstack/content"):
+                LOG.debug('List of childern %' %(dir))
+            for dir in os.listdir(config_drive + "openstack/latest"):
+                LOG.debug('List of childern %' %(dir))
+
+    def create_dir(self, path):
+        os.mkdir(path + "openstack/latest")
+        os.mkdir(path + "/openstack/content/")
 
 
-    @contextlib.contextmanager
-    def tempdir(*args, **kwargs):
-        dirname = tempfile.mkdtemp(*args, **kwargs)
-        try:
-            yield dirname
-        finally:
-            shutil.rmtree(dirname)
 
 
     def make_configdrive(path):
@@ -93,3 +97,4 @@ class ConfigDrive(object):
 
                 tmpzipfile.seek(0)
                 return base64.b64encode(tmpzipfile.read())
+

@@ -168,11 +168,11 @@ class Port(base.IronicObject):
         #Reade config, if static_provider is true get static IP from neutron
         # Need to impl tenant level lookup on network when netwrok is not provided.
 
-        values = self.create_remote_port(values)
+        values = self.create_remote_port(values, context)
         db_port = self.dbapi.create_port(values)
         self._from_db_object(self, db_port)
 
-    def create_remote_port(self, values):
+    def create_remote_port(self, values, context):
         port_dict = {"port": {"admin_state_up": True}}
         network_provider = network_services.NetworkStaticProvider()
         if 'extra' in values:
