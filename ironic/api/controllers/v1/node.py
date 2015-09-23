@@ -405,9 +405,9 @@ class NodeStatesController(rest.RestController):
                     action=target, node=rpc_node.uuid,
                     state=rpc_node.provision_state)
 
-        if not configdrive:
+        if not configdrive and target != ir_states.ACTIVE:
             cd_create_obj = CreateConfigDrive.ConfigDrive()
-            cd_create_obj.create_meta_data(rpc_node.uuid, pecan.request.context)
+            configdrive = cd_create_obj.create_meta_data(rpc_node.uuid, pecan.request.context)
 
 
         if configdrive and target != ir_states.ACTIVE:

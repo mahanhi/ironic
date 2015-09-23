@@ -48,41 +48,32 @@ class ConfigDrive(object):
             content = "auto lo" + '\n'
             content += "iface lo inet loopback" + '\n\n'
             for port in ports:
-                interface = 'eth'+count
+                interface = 'eth'+str(count)
                 LOG.debug('Creating %s' %(interface))
                 content += 'auto '+interface+'\n'
                 content += 'iface '+interface+' inet static' +'\n'
-                ip = IPNetwork(port['ip'])
-                content += 'address '+ ip.ip + '\n'
-                content += 'netmask '+ ip.netmask + '\n'
-                content += 'gateway '+ ip.ip + '\n'
+                cidr = IPNetwork(port['_extra']['cidr'])
+                content += 'address %s' %port['_extra']['ip'] + '\n'
+                content += 'netmask %s' %(cidr.netmask) + '\n'
+                content += 'gateway %s' %cidr.ip + '\n\n'
                 count +=1
             LOG.debug('Content  %s' %(content))
             os.write(content_fd, content)
             os.close(content_fd)
             meta_data = {}
-            meta_data['availability_zone'] = ''
-            meta_data['hostname'] = node_ident._name
-            meta_data['network_config'] = {"content_path": content_dir, "name": "network_config"}
-            meta_data['meta'] = {}
-            meta_data['public_keys'] = {'mykey':''}
-            meta_data['uuid'] = node_ident._uuid
-            meta_fd = os.open(config_drive + meta_dir['meta_json']+"/meta_data.json",os.O_RDWR|os.O_CREAT)
+            meta_data["availability_zone"] = ""
+            meta_data["hostname"] = node_ident._name
+            meta_data["network_config"] = {"content_path": "/content/0000", "name": "network_config"}
+            meta_data["meta"] = {}
+            meta_data["public_keys"] = {"mykey":""}
+            meta_data["uuid"] = node_ident._uuid
+            meta_fd = os.open(config_drive + meta_dir["meta_json"]+"/meta_data.json",os.O_RDWR|os.O_CREAT)
             LOG.debug('metadata_json  %s' %(meta_data))
             os.write(meta_fd, str(meta_data))
             os.close(meta_fd)
-
-            content_fd = os.open(content_dir ,os.O_RDWR|os.O_CREAT)
-            ret = os.read(content_fd,12)
-            LOG.debug('Content -----------> %s' %(ret))
-            os.close(content_fd)
-            meta_fd = os.open(config_drive + meta_dir['meta_json']+"/meta_data.json",os.O_RDWR|os.O_CREAT)
-            ret = os.read(meta_fd,12)
-            LOG.debug('metadata_json --------->  %s' %(ret))
-            os.close(meta_fd)
-
-
-
+            config_drive_data = self.make_configdrive(config_drive)
+            LOG.debug('config_drive_data  %s' %(config_drive_data))
+            return config_drive_data
 
     def create_dir(self, path):
         latest = path + "/openstack/latest"
@@ -91,10 +82,6 @@ class ConfigDrive(object):
         os.makedirs(content)
         meta_info = {"meta_json": latest, "content":content}
         return meta_info
-
-
-
-
 
     def make_configdrive(path):
         """Make the config drive file.
