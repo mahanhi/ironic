@@ -83,7 +83,7 @@ class ConfigDrive(object):
         meta_info = {"meta_json": latest, "content":content}
         return meta_info
 
-    def make_configdrive(path):
+    def make_configdrive(self, path):
         """Make the config drive file.
         :param path: The directory containing the config drive files.
         :returns: A gzipped and base64 encoded configdrive string.
