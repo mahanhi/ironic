@@ -18,6 +18,7 @@ from ironic.common import exception
 from ironic.common.i18n import _
 from ironic.common import utils
 from ironic.openstack.common import log
+from netaddr import *
 
 LOG = log.getLogger(__name__)
 
@@ -39,22 +40,57 @@ class ConfigDrive(object):
         ports = objects.Port.list_by_node_id(context, node_ident._id)
         LOG.debug('Got all the ports for %s, [%s]' %(node_uuid, ports))
         with utils.tempdir() as config_drive:
-            LOG.debug('Got all the ports for %s, [%s] , %s' %(node_uuid, ports, config_drive))
-            self.create_dir(config_drive)
-            meta_fd = os.open(config_drive + "/openstack/latest/meta_data.json",os.O_RDWR|os.O_CREAT)
-            content_fd = os.open(config_drive + "/openstack/content/0000",os.O_RDWR|os.O_CREAT)
-            os.write(meta_fd, str(node_ident._id))
-            os.write(content_fd, str(ports[0]))
-            for dir in os.listdir(config_drive + "/openstack/content"):
-                LOG.debug('List of childern %' %(dir))
-            for dir in os.listdir(config_drive + "/openstack/latest"):
-                LOG.debug('List of childern %' %(dir))
+            LOG.debug('Created temp directory %s, %s' %(node_uuid , config_drive))
+            meta_dir = self.create_dir(config_drive)
+            count = 0
+            content_dir = meta_dir['content']+'/0000'
+            content_fd = os.open(content_dir ,os.O_RDWR|os.O_CREAT)
+            content = "auto lo" + '\n'
+            content += "iface lo inet loopback" + '\n\n'
+            for port in ports:
+                interface = 'eth'+count
+                LOG.debug('Creating %s' %(interface))
+                content += 'auto '+interface+'\n'
+                content += 'iface '+interface+' inet static' +'\n'
+                ip = IPNetwork(port['ip'])
+                content += 'address '+ ip.ip + '\n'
+                content += 'netmask '+ ip.netmask + '\n'
+                content += 'gateway '+ ip.ip + '\n'
+                count +=1
+            LOG.debug('Content  %s' %(content))
+            os.write(content_fd, content)
+            os.close(content_fd)
+            meta_data = {}
+            meta_data['availability_zone'] = ''
+            meta_data['hostname'] = node_ident._name
+            meta_data['network_config'] = {"content_path": content_dir, "name": "network_config"}
+            meta_data['meta'] = {}
+            meta_data['public_keys'] = {'mykey':''}
+            meta_data['uuid'] = node_ident._uuid
+            meta_fd = os.open(config_drive + meta_dir['meta_json']+"/meta_data.json",os.O_RDWR|os.O_CREAT)
+            LOG.debug('metadata_json  %s' %(meta_data))
+            os.write(meta_fd, str(meta_data))
+            os.close(meta_fd)
+
+            content_fd = os.open(content_dir ,os.O_RDWR|os.O_CREAT)
+            ret = os.read(content_fd,12)
+            LOG.debug('Content -----------> %s' %(ret))
+            os.close(content_fd)
+            meta_fd = os.open(config_drive + meta_dir['meta_json']+"/meta_data.json",os.O_RDWR|os.O_CREAT)
+            ret = os.read(meta_fd,12)
+            LOG.debug('metadata_json --------->  %s' %(ret))
+            os.close(meta_fd)
+
+
+
 
     def create_dir(self, path):
         latest = path + "/openstack/latest"
         content = path + "/openstack/content/"
         os.makedirs(latest)
         os.makedirs(content)
+        meta_info = {"meta_json": latest, "content":content}
+        return meta_info
 
 
 
