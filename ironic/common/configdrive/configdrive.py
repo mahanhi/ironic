@@ -67,7 +67,7 @@ class ConfigDrive(object):
             meta_data["meta"] = {}
             meta_data["public_keys"] = {"mykey":""}
             meta_data["uuid"] = node_ident._uuid
-            meta_fd = os.open(config_drive + meta_dir["meta_json"]+"/meta_data.json",os.O_RDWR|os.O_CREAT)
+            meta_fd = os.open( meta_dir["meta_json"]+"/meta_data.json",os.O_RDWR|os.O_CREAT)
             LOG.debug('metadata_json  %s' %(meta_data))
             os.write(meta_fd, str(meta_data))
             os.close(meta_fd)
